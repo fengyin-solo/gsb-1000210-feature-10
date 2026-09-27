@@ -9,7 +9,7 @@ MODULE = "meter"
 REQUIRED_FIELDS = ["表计编号", "表计型号", "计量点位置"]
 STATUS_ORDER = ["正常运行", "通讯中断", "示数异常", "待校验"]
 ACTION_RULES = {"记录示数": "正常运行", "标记异常": "示数异常", "送检校验": "待校验"}
-NEGATIVE_ACTIONS = []
+NEGATIVE_ACTIONS = ["标记异常"]
 
 
 class MeterService:
@@ -17,6 +17,8 @@ class MeterService:
         self,
         *,
         keyword: str | None = None,
+        location: str | None = None,
+        expire_before: str | None = None,
         status: str | None = None,
         page: int = 1,
         size: int = 20,
@@ -24,6 +26,17 @@ class MeterService:
         rows = store.rows(MODULE)
         if keyword:
             rows = [row for row in rows if keyword in str(row.get("表计编号", ""))]
+        if location:
+            rows = [row for row in rows if location in str(row.get("计量点位置", ""))]
+        if expire_before:
+            # 检定有效期早于或等于查询日，即该日之前（含当日）已到期；
+            # 未登记检定有效期的表计不参与有效期筛选，避免把脏数据静默算成结果。
+            rows = [
+                row
+                for row in rows
+                if str(row.get("检定有效期") or "") <= expire_before
+                and bool(str(row.get("检定有效期") or "").strip())
+            ]
         if status:
             rows = [row for row in rows if row.get("status") == status]
         total = len(rows)
@@ -58,4 +71,6 @@ class MeterService:
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
+        # 列表里的「表计状态」列跟着动作同步，避免筛选项与展示列口径不一致。
+        entry["表计状态"] = target
         return entry, f"计量表计已{action}"

@@ -147,7 +147,8 @@ class MeterEntry(BaseModel):
     field_4: str | None = None  # 上次示数
     field_5: str | None = None  # 当前示数
     field_6: str | None = None  # 校验日期
-    field_7: str | None = None  # 表计状态
+    field_7: str | None = None  # 检定有效期
+    field_8: str | None = None  # 表计状态
 
 class WeatherEntry(BaseModel):
     """气象数据明细结构。"""
