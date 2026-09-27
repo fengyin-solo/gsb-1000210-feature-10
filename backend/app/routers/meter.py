@@ -20,13 +20,27 @@ STATUSES = ["正常运行", "通讯中断", "示数异常", "待校验"]
 def list_entries(
     keyword: str | None = Query(default=None, description="按表计编号检索"),
     status: str | None = Query(default=None, description="正常运行、通讯中断、示数异常、待校验"),
+    location: str | None = Query(default=None, description="按计量点位置检索"),
+    valid_from: str | None = Query(default=None, description="检定有效期起，格式 YYYY-MM-DD"),
+    valid_to: str | None = Query(default=None, description="检定有效期止，格式 YYYY-MM-DD"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按表计编号与状态过滤关口计量列表；没有数据时返回空页，不报错。"""
+    """按表计编号、状态、计量点位置与检定有效期过滤关口计量列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    try:
+        items, total = service.list_entries(
+            keyword=keyword,
+            status=status,
+            location=location,
+            valid_from=valid_from,
+            valid_to=valid_to,
+            page=page,
+            size=size,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return PageResult(items=items, total=total, page=page, size=size)
 
 
